@@ -8,7 +8,8 @@ We design an adaptive truncation strategy that dynamically optimizes input lengt
 Experiments demonstrate that AMMPUF outperforms the comparisons in achieving better classification
 
 The flowchart of AMMPUF is as follows.
-<img src="image/overview.png" alt="flowchart of AMMPUF" width="200"/>
+
+<img src="image/overview.png" alt="flowchart of AMMPUF" width="300"/>
 
 ## Model Architecture
 
