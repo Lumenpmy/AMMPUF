@@ -15,6 +15,6 @@ The flowchart of AMMPUF is as follows.
 
 Below is the schematic representation of the AMMPUF model:
 
-![Model diagram](image/model diagram.png)
+![Model diagram](image/model_diagram.png)
 
 *For detailed information, methodologies, and specific experiment results, we encourage readers to consult our paper.*
