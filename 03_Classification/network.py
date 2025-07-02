@@ -232,16 +232,7 @@ class NetworkTrafficClassifier(nn.Module):
         self.classifier = nn.Linear(128, num_classes)
         
     def forward(self, node_features, adj_matrix, token_data,flag,device):
-        if flag==2:
-            token_features = self.transformer(token_data)
-            # print(token_features.shape)
-            # 全局池化 取最大池化和平均池化
-            token_max = torch.max(token_features, dim=1)[0]
-            token_mean = torch.mean(token_features, dim=1)
-            token_features = torch.cat([token_max, token_mean], dim=1)  # (batch_size, token_out_dim * 2)
-            combined_features = token_features
-            aligned_features=self.alignment_only_encoder(combined_features)
-        else:
+       
             graph_features = self.graph_net(node_features, adj_matrix)
 
             # 全局池化 取最大池化和平均池化
@@ -250,43 +241,31 @@ class NetworkTrafficClassifier(nn.Module):
             graph_mean = torch.mean(graph_features, dim=1)
             # print('mean',graph_mean.shape)
             graph_features = torch.cat([graph_max, graph_mean],dim=1) # (batch_size, graph_out_channels * 2)
-            if flag==1:
-                token_features = self.transformer(token_data)
-                # 全局池化 取最大池化和平均池化
-                token_max = torch.max(token_features, dim=1)[0]
-                token_mean = torch.mean(token_features, dim=1)
-                token_features = torch.cat([token_max, token_mean], dim=1) # (batch_size, token_out_dim * 2)
-                # 模态对齐
-                # graph_features = graph_features.unsqueeze(0)  # [1, graph_out_channels * 2]
-                # print(graph_features.shape)
-                # print(token_features.shape)
-                # [batch_size, graph_out_channels * 2 + d_model * 2]
-                # combined_features = torch.cat([graph_features, token_features], dim=1)
-                # aligned_features = self.alignment(combined_features)
+            
+            token_features = self.transformer(token_data)
+            # 全局池化 取最大池化和平均池化
+            token_max = torch.max(token_features, dim=1)[0]
+            token_mean = torch.mean(token_features, dim=1)
+            token_features = torch.cat([token_max, token_mean], dim=1) # (batch_size, token_out_dim * 2)
+        
+            graph_features = self.graph_mapper(graph_features)  # [B, fusion_dim]
+            token_features = self.token_mapper(token_features)  # [B, fusion_dim]
+            # graph_features = self.alignment_only_sage(graph_features)
+            # token_features = self.alignment_only_encoder(token_features)
 
-                graph_features = self.graph_mapper(graph_features)  # [B, fusion_dim]
-                token_features = self.token_mapper(token_features)  # [B, fusion_dim]
-                # graph_features = self.alignment_only_sage(graph_features)
-                # token_features = self.alignment_only_encoder(token_features)
+            score_vec = torch.tensor(
+                [self.interclassgap_graph, self.interclassgap_token], dtype=torch.float32,
+                device=graph_features.device
+            ).unsqueeze(0).repeat(graph_features.size(0), 1)  # shape: [B, 2]
 
-                # 如果你用的是 numpy 类型，请先转成 float，再放进 torch
-                score_vec = torch.tensor(
-                    [self.interclassgap_graph, self.interclassgap_token], dtype=torch.float32,
-                    device=graph_features.device
-                ).unsqueeze(0).repeat(graph_features.size(0), 1)  # shape: [B, 2]
+            #  输入 gating 网络，得到融合权重
+            gate_logits = self.gating_net(score_vec)  # [B, 2]
+            gate_weights = F.softmax(gate_logits, dim=-1)  # [B, 2]
+            w_g = gate_weights[:, 0].unsqueeze(-1)  # [B, 1]
+            w_t = gate_weights[:, 1].unsqueeze(-1)  # [B, 1]
 
-                # 3. 输入 gating 网络，得到融合权重
-                gate_logits = self.gating_net(score_vec)  # [B, 2]
-                gate_weights = F.softmax(gate_logits, dim=-1)  # [B, 2]
-                w_g = gate_weights[:, 0].unsqueeze(-1)  # [B, 1]
-                w_t = gate_weights[:, 1].unsqueeze(-1)  # [B, 1]
-
-                # 4. 融合特征
-                aligned_features = w_g * graph_features + w_t * token_features  # [B, fusion_dim]
-
-            else:
-                combined_features = graph_features
-                aligned_features = self.alignment_only_sage(combined_features)
+            # 4. 融合特征
+            aligned_features = w_g * graph_features + w_t * token_features  # [B, fusion_dim]
         
         # 分类
         output = self.classifier(aligned_features)
@@ -306,7 +285,6 @@ def create_model(device,interclassgap_graph, interclassgap_token,graph_in_channe
     return model
 
 class Params():
-    """encoder的超参数，可以自行设置"""
     d_model = 512
     head_count = 8
     ffn_size = 4096
