@@ -9,12 +9,12 @@ Experiments demonstrate that AMMPUF outperforms the comparisons in achieving bet
 
 The flowchart of AMMPUF is as follows.
 
-<img src="image/overview.png" alt="flowchart of AMMPUF" width="300"/>
+![flowchart of AMMPUF](image/overview.png)
 
 ## Model Architecture
 
 Below is the schematic representation of the AMMPUF model:
 
-<img src="image/model diagram.png" alt="Model diagram" width="500"/>
+![Model diagram](image/model diagram.png)
 
 *For detailed information, methodologies, and specific experiment results, we encourage readers to consult our paper.*
