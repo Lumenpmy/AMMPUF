@@ -549,10 +549,7 @@ if __name__ == '__main__':
     multimodel = create_model(device, interclassgap_graph, interclassgap_token)
     multimodel=torch.nn.DataParallel(multimodel, device_ids=range(torch.cuda.device_count()))
     flag_map = {
-        # 'GraphSAGE_': 0,
-        'GraphSAGE_Transformer_': 1,
-        # 'Transformer':2
-
+        'GraphSAGE_Transformer_': 1
     }
 
     for model_name in flag_map:
